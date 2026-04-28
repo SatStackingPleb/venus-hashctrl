@@ -81,17 +81,55 @@ Battery stability is always prioritized.
 
 VenusHashCtrl is designed to integrate with LuxOS first.
 
-Reason:
+Reasons:
 
-- Stable API surface
-- Fine-grained frequency and voltage control
+- Stable, well-documented API surface
+- Fine-grained frequency and voltage control per board
 - Reliable telemetry (temps, hashrate, board status)
+- Native **Ignore PSU** mode — critical for DC-direct operation
+
+#### Why Ignore PSU Matters
+
+Standard ASIC firmware expects to communicate with an APW-series PSU over a proprietary protocol. Without a PSU present, the miner faults and refuses to operate.
+
+LuxOS's Ignore PSU feature disables this handshake requirement, allowing hashboards to run on any DC power source — including a direct battery bus. This is what makes VenusHashCtrl's core design possible at the firmware level. Without it, DC-direct operation would require physical PSU spoofing or hardware modification.
+
+This feature effectively legitimizes the architecture. The miner doesn't need to be tricked — the firmware is simply told there is no PSU to monitor.
 
 ### Secondary Support
 
-- Braiins OS+ (planned via abstraction layer)
+#### Braiins OS+
 
-All miner control must pass through a firmware abstraction layer to allow multi-firmware support without changing core logic.
+- Planned via firmware abstraction layer
+- Power limit API well-suited to solar load matching
+- Lacks per-board voltage control compared to LuxOS
+
+#### Mujina
+
+Mujina is an emerging open-source Bitcoin mining firmware from the 256 Foundation targeting multiple ASIC platforms including 256 Foundation's own Libreboard. It represents the longer-term direction for this project:
+
+- Open codebase enables deeper integration than closed firmware APIs
+- Community-driven development aligns with the off-grid and open-source ethos of this project
+- REST API in active development (currently unstable)
+
+Currently runs on Bitaxe Gamma and EmberOne00. S19-series installable images are a stated near-term target but not yet available.
+
+Support for Mujina is tracked as a future integration target once S19-class support ships and its API stabilizes.
+
+### Deployment Priority Rationale
+
+LuxOS and Braiins OS+ are prioritized over Mujina for one reason: **mass deployability**.
+
+LuxOS and Braiins OS+ are already running on a large installed base of S19-class machines. A user can install VenusHashCtrl and be operational without touching their miner's firmware — the control layer speaks to whatever is already there.
+
+Mujina requires reflashing the miner, which is a meaningful barrier: voided warranties, brick risk, and a step most operators won't take to try new software. Mujina support is the right long-term direction, but prioritizing it would limit the project's reach to early adopters willing to take that risk.
+
+The goal is a configuration that can be deployed at scale to existing control boards and machines, with no hardware modification and no firmware flashing required.
+
+### Abstraction Layer
+
+All miner control passes through a firmware abstraction layer. Core control logic never calls firmware APIs directly — it calls abstract operations (`set_frequency`, `stop`, `get_telemetry`) that each firmware adapter implements. This keeps LuxOS-specific behavior isolated and allows Braiins OS+ and Mujina support to be added without touching control logic.
+
 
 ## Operating Modes
 
